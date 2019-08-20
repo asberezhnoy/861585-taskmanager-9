@@ -1,3 +1,20 @@
+function HashTag(text) {
+  this.toString = function () {
+    return `#${text}`;
+  };
+}
+
+function DeadLine(date, time) {
+  this.date = date;
+  this.time = time;
+}
+
+function Task(description, deadLine, hashTags) {
+  this.description = description;
+  this.deadLine = deadLine;
+  this.hashTags = hashTags;
+}
+
 const createMenu = () => `
   <section class="control__btn-wrap">
     <input
@@ -104,41 +121,45 @@ name="filter"
 >Archive <span class="filter__archive-count">115</span></label
 >`;
 
-const createDeadLine = (date, time) => `
-<div class="card__dates">
+const createDeadLine = (deadLine) => {
+  if (deadLine === null || !(deadLine instanceof DeadLine)) {
+    return ``;
+  }
+  return `<div class="card__dates">
   <div class="card__date-deadline">
     <p class="card__input-deadline-wrap">
-      <span class="card__date">${date}</span>
-      <span class="card__time">${time}</span>
+      <span class="card__date">${deadLine.date}</span>
+      <span class="card__time">${deadLine.time}</span>
     </p>
   </div>
 </div>`;
+};
 
-const createHashTags = (values) => {
-  if (values === null || !Array.isArray(values) || values.length === 0) {
+const createHashTags = (hashTags) => {
+  if (hashTags === null || !Array.isArray(hashTags) || hashTags.length === 0) {
     return ``;
   }
 
   let hashTagList = ``;
-
-  for (let i = 0; i < values.length; i++) {
+  hashTags.forEach((hashTag) => {
     hashTagList += `
     <span class="card__hashtag-inner">
       <span class="card__hashtag-name">
-        ${values[i]}
+        ${hashTag}
       </span>
     </span>`;
-  }
+  });
 
-  return `
-  <div class="card__hashtag">
+  return `<div class="card__hashtag">
     <div class="card__hashtag-list">
     ${hashTagList}
     </div>
   </div>`;
 };
 
-const createCard = (text, dates, hashTags) => `<div class="card__form">
+const createCard = (task) => `
+<article class="card card--black">
+<div class="card__form">
 <div class="card__inner">
   <div class="card__control">
     <button type="button" class="card__btn card__btn--edit">
@@ -162,17 +183,18 @@ const createCard = (text, dates, hashTags) => `<div class="card__form">
   </div>
 
   <div class="card__textarea-wrap">
-    <p class="card__text">${text}.</p>
+    <p class="card__text">${task.description}.</p>
   </div>
 
   <div class="card__settings">
     <div class="card__details">
-      ${dates !== undefined && dates !== null ? dates : ``}
-      ${hashTags !== undefined && hashTags !== null ? hashTags : ``}
+      ${createDeadLine(task.deadLine)}
+      ${createHashTags(task.hashTags)}
     </div>
   </div>
 </div>
-</div>`;
+</div>
+</article>`;
 
 const createTaskBoardFilters = () => `<div class="board__filter-list">
 <a href="#" class="board__filter">SORT BY DEFAULT</a>
@@ -180,29 +202,33 @@ const createTaskBoardFilters = () => `<div class="board__filter-list">
 <a href="#" class="board__filter">SORT BY DATE down</a>
 </div>`;
 
-const createTaskBoard = () => `${createTaskBoardFilters()}
+const createTaskBoard = (tasks) => {
+  let template = `${createTaskBoardFilters()}
+  <div class="board__tasks">`;
 
-<div class="board__tasks">
-<article class="card card--black">
-${createCard(`Example default task with default color`, createDeadLine(`23 September`, `11:15 PM`), createHashTags([`#todo`, `#personal`, `#important`]))}
-</article>
-<article class="card card--black">
-${createCard(`Example default task with default color`, createDeadLine(`23 September`, `11:15 PM`))}
-</article>
-<article class="card card--black">
-${createCard(`Example default task with default color`, createHashTags([`#todo`, `#personal`, `#important`]))}
-</article>
-</div>
+  for (let task of tasks) {
+    template += createCard(task);
+  }
 
-${createLoadMore()}`;
+  template += `</div>${createLoadMore()}`;
+  return template;
+};
 
 const createLoadMore = () => `<button class="load-more" type="button">load more</button>`;
 
-const render = (containerClass, content) => {
-  document.querySelector(`.${containerClass}`).innerHTML += content;
+const render = (container, template) => {
+  container.insertAdjacentHTML(`beforeend`, template);
 };
 
-render(`board`, createTaskBoard());
-render(`main__control`, createMenu());
-render(`main__search`, createSearch());
-render(`main__filter`, createFilter());
+const getMockTasks = () => {
+  return [
+    new Task(`Example default task with default color`, new DeadLine(`23 September`, `11:15 PM`), [new HashTag(`#todo`), new HashTag(`#personal`), new HashTag(`#important`)]),
+    new Task(`Example default task with default color`, null, [new HashTag(`#todo`), new HashTag(`#personal`), new HashTag(`#important`)]),
+    new Task(`Example default task with default color`, new DeadLine(`23 September`, `11:15 PM`), null),
+  ];
+};
+
+render(document.querySelector(`.board`), createTaskBoard(getMockTasks()));
+render(document.querySelector(`.main__control`), createMenu());
+render(document.querySelector(`.main__search`), createSearch());
+render(document.querySelector(`.main__filter`), createFilter());
