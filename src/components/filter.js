@@ -1,68 +1,62 @@
-const createFilterTemplate = () => `<input
-type="radio"
-id="filter__all"
-class="filter__input visually-hidden"
-name="filter"
-checked
-/>
-<label for="filter__all" class="filter__label">
-All <span class="filter__all-count">13</span></label
->
-<input
-type="radio"
-id="filter__overdue"
-class="filter__input visually-hidden"
-name="filter"
-disabled
-/>
-<label for="filter__overdue" class="filter__label"
->Overdue <span class="filter__overdue-count">0</span></label
->
-<input
-type="radio"
-id="filter__today"
-class="filter__input visually-hidden"
-name="filter"
-disabled
-/>
-<label for="filter__today" class="filter__label"
->Today <span class="filter__today-count">0</span></label
->
-<input
-type="radio"
-id="filter__favorites"
-class="filter__input visually-hidden"
-name="filter"
-/>
-<label for="filter__favorites" class="filter__label"
->Favorites <span class="filter__favorites-count">1</span></label
->
-<input
-type="radio"
-id="filter__repeating"
-class="filter__input visually-hidden"
-name="filter"
-/>
-<label for="filter__repeating" class="filter__label"
->Repeating <span class="filter__repeating-count">1</span></label
->
-<input
-type="radio"
-id="filter__tags"
-class="filter__input visually-hidden"
-name="filter"
-/>
-<label for="filter__tags" class="filter__label"
->Tags <span class="filter__tags-count">1</span></label
->
-<input
-type="radio"
-id="filter__archive"
-class="filter__input visually-hidden"
-name="filter"
-/>
-<label for="filter__archive" class="filter__label"
->Archive <span class="filter__archive-count">115</span></label
->`;
+function Filter(type, title, count) {
+  this.title = title;
+  this.count = count;
 
-export {createFilterTemplate};
+  this.getType = function () {
+    return type;
+  };
+}
+
+Filter.FILTERTYPE_ALL = `all`;
+Filter.FILTERTYPE_FAVORITES = `favorites`;
+Filter.FILTERTYPE_OVERDUE = `overdue`;
+Filter.FILTERTYPE_REPEATINGS = `repeating`;
+Filter.FILTERTYPE_TAGS = `tags`;
+Filter.FILTERTYPE_ARCHIVE = `archive`;
+Filter.FILTERTYPE_TODAY = `today`;
+
+function FilterFactory() {
+}
+
+FilterFactory.createFilter = (tasks, type, title, isFilterTaskCallback) => {
+  const count = tasks.reduce(function (previousValue, currentValue) {
+    return isFilterTaskCallback(currentValue) ? previousValue + 1 : previousValue;
+  }, 0);
+  return new Filter(type, title, count);
+};
+
+FilterFactory.createAllFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_ALL, `All`, () => true);
+FilterFactory.createFavoritesFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_FAVORITES, `Favorites`, (task) => task.isFavorite);
+FilterFactory.createOverdueFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_OVERDUE, `Overdue`, (task) => task.isDeadLine());
+FilterFactory.createRepeatingFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_REPEATINGS, `Repeating`, (task) => task.isRepeating());
+FilterFactory.createTagsFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_TAGS, `Tags`, (task) => task.hasTags());
+FilterFactory.createArchiveFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_ARCHIVE, `Archive`, (task) => task.isArchive);
+FilterFactory.createTodayaFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_TODAY, `Today`, (task) => {
+  const today = new Date();
+  const taskDt = new Date(task.dueDate);
+
+  return today.getFullYear() === taskDt.getFullYear() && today.getMonth() === taskDt.getMonth() && today.getDate() === taskDt.getDate();
+});
+
+const createFilterTemplate = (filter, isChecked, isDisabled = false) => `
+    <input
+    type="radio"
+    id="filter__${filter.type}"
+    class="filter__input visually-hidden"
+    name="filter"
+    ${isChecked ? ` checked` : ``}
+    ${isDisabled ? ` disabled` : ``}    
+    />
+    <label for="filter__${filter.type}" class="filter__label">
+    ${filter.title} <span class="filter__${filter.type}-count">${filter.count}</span></label
+    >`;
+
+const createFiltersTemplate = (tasks) => {
+  const filters = [FilterFactory.createAllFilter(tasks), FilterFactory.createOverdueFilter(tasks), FilterFactory.createTodayaFilter(tasks),
+    FilterFactory.createFavoritesFilter(tasks), FilterFactory.createRepeatingFilter(tasks), FilterFactory.createTagsFilter(tasks),
+    FilterFactory.createArchiveFilter(tasks)];
+
+  return filters.map((filter) => createFilterTemplate(filter, filter.getType() === Filter.FILTERTYPE_ALL)).join(``);
+};
+
+export {Filter as default, createFiltersTemplate};
