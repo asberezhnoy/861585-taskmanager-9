@@ -1,18 +1,36 @@
-function HashTag(text) {
-  this.toString = function () {
-    return `#${text}`;
-  };
+function RepeatingDays() {
+  this.Mo = false;
+  this.Tu = false;
+  this.We = false;
+  this.Th = false;
+  this.Fr = false;
+  this.Sa = false;
+  this.Su = false;
 }
 
-function DeadLine(date, time) {
-  this.date = date;
-  this.time = time;
-}
-
-function Task(description, deadLine, hashTags) {
+function Task(description, dueDate) {
   this.description = description;
-  this.deadLine = deadLine;
-  this.hashTags = hashTags;
+  this.dueDate = dueDate;
+  this.tags = new Set();
+  this.color = null;
+  this.repeatingDays = new RepeatingDays();
+  this.isFavorite = false;
+  this.isArchive = false;
 }
 
-export {Task as default, HashTag, DeadLine};
+Task.prototype = {
+  isRepeating() {
+    return this.repeatingDays !== null && this.repeatingDays.Mo || this.repeatingDays.Tu || this.repeatingDays.We
+     || this.repeatingDays.Th || this.repeatingDays.Fr || this.repeatingDays.Sa || this.repeatingDays.Su;
+  },
+
+  isDeadLine() {
+    return Date.now() > this.dueDate;
+  },
+
+  hasTags() {
+    return this.tags !== null && this.tags.size > 0;
+  }
+};
+
+export {Task as default, RepeatingDays};
