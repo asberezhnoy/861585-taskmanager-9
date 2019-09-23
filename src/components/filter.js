@@ -1,62 +1,160 @@
-function Filter(type, title, count) {
-  this.title = title;
-  this.count = count;
+import {createElement} from './utils';
 
-  this.getType = function () {
-    return type;
-  };
-}
+class FilterItem {
+  constructor(name, title) {
+    let _checked = false;
+    let _disabled = false;
+    let _element = null;
+    let _count = 0;
 
-Filter.FILTERTYPE_ALL = `all`;
-Filter.FILTERTYPE_FAVORITES = `favorites`;
-Filter.FILTERTYPE_OVERDUE = `overdue`;
-Filter.FILTERTYPE_REPEATINGS = `repeating`;
-Filter.FILTERTYPE_TAGS = `tags`;
-Filter.FILTERTYPE_ARCHIVE = `archive`;
-Filter.FILTERTYPE_TODAY = `today`;
+    this.getName = function () {
+      return name;
+    };
 
-function FilterFactory() {
-}
+    this.getTitle = function () {
+      return title;
+    };
 
-FilterFactory.createFilter = (tasks, type, title, isFilterTaskCallback) => {
-  const count = tasks.reduce(function (previousValue, currentValue) {
-    return isFilterTaskCallback(currentValue) ? previousValue + 1 : previousValue;
-  }, 0);
-  return new Filter(type, title, count);
-};
+    this.setCount = function (value) {
+      _count = value;
+    };
 
-FilterFactory.createAllFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_ALL, `All`, () => true);
-FilterFactory.createFavoritesFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_FAVORITES, `Favorites`, (task) => task.isFavorite);
-FilterFactory.createOverdueFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_OVERDUE, `Overdue`, (task) => task.isDeadLine());
-FilterFactory.createRepeatingFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_REPEATINGS, `Repeating`, (task) => task.isRepeating());
-FilterFactory.createTagsFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_TAGS, `Tags`, (task) => task.hasTags());
-FilterFactory.createArchiveFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_ARCHIVE, `Archive`, (task) => task.isArchive);
-FilterFactory.createTodayaFilter = (tasks) => FilterFactory.createFilter(tasks, Filter.FILTERTYPE_TODAY, `Today`, (task) => {
-  const today = new Date();
-  const taskDt = new Date(task.dueDate);
+    this.getCount = function () {
+      return _count;
+    };
 
-  return today.getFullYear() === taskDt.getFullYear() && today.getMonth() === taskDt.getMonth() && today.getDate() === taskDt.getDate();
-});
+    this.setChecked = function (value) {
+      if (typeof (value) !== `boolean`) {
+        throw new TypeError(`Incoming parameter has invalid tyoe`);
+      }
 
-const createFilterTemplate = (filter, isChecked, isDisabled = false) => `
-    <input
+      const element = this.getElement().querySelector(`input`);
+
+      if (value === false) {
+        element.removeAttribute(`checked`);
+      } else if (value === true) {
+        element.setAttribute(`checked`, null);
+      }
+
+      _checked = value;
+    };
+
+    this.isChecked = function () {
+      return _checked;
+    };
+
+    this.setDisabled = function (value) {
+      if (typeof (value) !== `boolean`) {
+        throw new TypeError(`Incoming parameter has invalid tyoe`);
+      }
+
+      const element = this.getElement().querySelector(`input`);
+
+      if (value === false) {
+        element.removeAttribute(`disabled`);
+      } else if (value === true) {
+        element.setAttribute(`disabled`, null);
+      }
+
+      _disabled = value;
+    };
+
+    this.isDisabled = function () {
+      return _disabled;
+    };
+
+    this.getElement = function () {
+      return _element || (_element = createElement(this.getTemplate()));
+    };
+
+    this.removeElelement = function () {
+      _element = null;
+    };
+  }
+
+  getTemplate() {
+    return `<input
     type="radio"
-    id="filter__${filter.type}"
+    id="filter__${this.getName()}"
     class="filter__input visually-hidden"
     name="filter"
-    ${isChecked ? ` checked` : ``}
-    ${isDisabled ? ` disabled` : ``}    
+    ${this.isChecked() ? ` checked` : ``}
+    ${this.isDisabled() ? ` disabled` : ``}    
     />
-    <label for="filter__${filter.type}" class="filter__label">
-    ${filter.title} <span class="filter__${filter.type}-count">${filter.count}</span></label
+    <label for="filter__${this.getName()}" class="filter__label">
+    ${this.getTitle()} <span class="filter__${this.getName()}-count">${this.getCount()}</span></label
     >`;
+  }
+}
 
-const createFiltersTemplate = (tasks) => {
-  const filters = [FilterFactory.createAllFilter(tasks), FilterFactory.createOverdueFilter(tasks), FilterFactory.createTodayaFilter(tasks),
-    FilterFactory.createFavoritesFilter(tasks), FilterFactory.createRepeatingFilter(tasks), FilterFactory.createTagsFilter(tasks),
-    FilterFactory.createArchiveFilter(tasks)];
-
-  return filters.map((filter) => createFilterTemplate(filter, filter.getType() === Filter.FILTERTYPE_ALL)).join(``);
+FilterItem.Names = {
+  ALL: `all`,
+  FAVORITES: `favorites`,
+  OVERDUE: `overdue`,
+  REPEATINGS: `repeating`,
+  TAGS: `tags`,
+  ARCHIVE: `archive`,
+  TODAY: `today`
 };
 
-export {Filter as default, createFiltersTemplate};
+class FilterItemFactory {
+  static createFilterItem(tasks, name, title, isFilterTaskCallback) {
+    const count = tasks.reduce(function (accumulator, task) {
+      return isFilterTaskCallback(task) ? accumulator + 1 : accumulator;
+    }, 0);
+
+    const filter = new FilterItem(name, title, count);
+    filter.setCount(count);
+    return filter;
+  }
+
+  static createAllFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.ALL, `All`, () => true);
+  }
+  static createFavoritesFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.FAVORITES, `Favorites`, (task) => task.isFavorite);
+  }
+  static createOverdueFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.OVERDUE, `Overdue`, (task) => task.isDeadLine());
+  }
+  static createRepeatingFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.REPEATINGS, `Repeating`, (task) => task.isRepeating());
+  }
+  static createTagsFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.TAGS, `Tags`, (task) => task.hasTags());
+  }
+  static createArchiveFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.ARCHIVE, `Archive`, (task) => task.isArchive);
+  }
+  static createTodayaFilterItem(tasks) {
+    return FilterItemFactory.createFilterItem(tasks, FilterItem.Names.TODAY, `Today`, (task) => {
+      const today = new Date();
+      const taskDt = new Date(task.dueDate);
+
+      return today.getFullYear() === taskDt.getFullYear() && today.getMonth() === taskDt.getMonth() && today.getDate() === taskDt.getDate();
+    });
+  }
+}
+
+export class Filter {
+  constructor(tasks) {
+    let _element = null;
+    const _items = [FilterItemFactory.createAllFilterItem(tasks), FilterItemFactory.createOverdueFilterItem(tasks), FilterItemFactory.createTodayaFilterItem(tasks),
+      FilterItemFactory.createFavoritesFilterItem(tasks), FilterItemFactory.createRepeatingFilterItem(tasks), FilterItemFactory.createTagsFilterItem(tasks),
+      FilterItemFactory.createArchiveFilterItem(tasks)];
+
+    _items[0].setChecked(true);
+
+    this.getTemplate = function () {
+      return _items.map((item) => item.getTemplate()).join(``);
+    };
+
+    this.getElement = function () {
+      return _element || (_element = createElement(this.getTemplate()));
+    };
+
+    this.removeElelement = function () {
+      _element = null;
+    };
+  }
+}
